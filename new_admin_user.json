@@ -1,0 +1,17 @@
+{"users": [
+  {
+    "localId": "thinkdataproject-admin",
+    "email": "thinkdataproject@gmail.com",
+    "emailVerified": true,
+    "passwordHash": "cGF5YWt1bWJ1aDEyMw==",
+    "salt": "fKxqL8sM3v",
+    "displayName": "Think Data Project",
+    "providerUserInfo": [
+      {
+        "providerId": "password",
+        "email": "thinkdataproject@gmail.com",
+        "displayName": "Think Data Project"
+      }
+    ]
+  }
+]}

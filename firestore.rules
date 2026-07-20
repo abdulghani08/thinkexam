@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    match /admins/{adminId} {
+      allow read: if request.auth != null && (isOwner(adminId) || isAdmin());
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    match /teachers/{teacherId} {
+      allow read: if request.auth != null && (isOwner(teacherId) || isAdmin());
+      allow write: if request.auth != null && (isOwner(teacherId) || isAdmin());
+    }
+    
+    match /students/{studentId} {
+      allow read: if request.auth != null && 
+        (isOwner(studentId) || isAdmin() ||
+         get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.classId == resource.data.classId);
+      allow write: if request.auth != null && (isOwner(studentId) || isAdmin());
+    }
+    
+    match /classes/{classId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+    
+    match /subjects/{subjectId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+    
+    match /exams/{examId} {
+      allow read: if request.auth != null && 
+        (resource.data.teacherId == request.auth.uid || isAdmin() ||
+         (get(/databases/$(database)/documents/students/$(request.auth.uid)).data.classId in resource.data.allowedClasses &&
+          resource.data.status == 'published'));
+      allow create: if request.auth != null && isAdmin() && request.resource.data.teacherId == request.auth.uid;
+      allow update: if request.auth != null && (resource.data.teacherId == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && (resource.data.teacherId == request.auth.uid || isAdmin());
+    }
+    
+    match /questions/{questionId} {
+      allow read: if request.auth != null && 
+        (get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid || 
+         isAdmin() ||
+         (get(/databases/$(database)/documents/students/$(request.auth.uid)).data.classId in 
+         get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.allowedClasses &&
+         get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.status == 'published'));
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid;
+    }
+    
+    match /examSessions/{sessionId} {
+      allow read: if request.auth != null && 
+        (resource.data.studentId == request.auth.uid || isAdmin() ||
+         get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
+      allow update: if request.auth != null && 
+        (resource.data.studentId == request.auth.uid || 
+         get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid);
+    }
+    
+    match /examAnswers/{answerId} {
+      allow read: if request.auth != null && 
+        (resource.data.studentId == request.auth.uid || isAdmin() ||
+         get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.studentId == request.auth.uid;
+    }
+    
+    match /examResults/{resultId} {
+      allow read: if request.auth != null && 
+        (resource.data.studentId == request.auth.uid || isAdmin() ||
+         get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid);
+      allow write: if request.auth != null && isAdmin();
+    }
+    
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if request.auth != null && isAdmin();
+    }
+    
+    match /appSettings/{settingId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+  }
+}
